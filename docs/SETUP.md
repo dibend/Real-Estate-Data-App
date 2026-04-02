@@ -4,7 +4,7 @@
 
 ```bash
 git clone https://github.com/dibend/Real-Estate-Data-App.git
-cd New-Jersey-ZHVI-Dash-Fedora-43
+cd Real-Estate-Data-App
 ```
 
 ## 2. Install with one `pip` command

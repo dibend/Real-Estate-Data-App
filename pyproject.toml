@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling>=1.26.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zhvi-dashboard"
+version = "0.1.0"
+description = "Public-facing 50-state ZHVI dashboard for ZIP-level housing trend exploration"
+authors = [{ name = "50-State ZHVI Dashboard maintainers" }]
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+  "aioquic>=1.3.0",
+  "brotli>=1.1.0",
+  "hypercorn>=0.18.0",
+  "pandas>=2.2.0",
+  "plotly>=6.0.0",
+  "quart>=0.20.0",
+]
+
+[project.scripts]
+zhvi-dashboard = "zhvi_dashboard.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+  "black>=24.10.0",
+  "pytest>=8.3.0",
+  "ruff>=0.6.9",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "UP", "B", "C4"]
+exclude = ["certs"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["zhvi_dashboard"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]

@@ -1,0 +1,25 @@
+# Virtual envs / tooling
+.venv/
+env/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+node_modules/
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+
+# App artifacts
+zillow-zip-data.csv
+certs/
+zillow-out.log
+demo-output/
+.env
+
+# Local helper scripts
+*.local.yaml
+.codex

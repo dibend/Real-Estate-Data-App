@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>50-State ZHVI Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4efe6;
+  --ink:#17242b;
+  --muted:#5a6b72;
+  --panel:#fffaf2;
+  --panel-2:#f9f2e7;
+  --line:#d7c9b5;
+  --line-strong:#c6b08a;
+  --accent:#b05f2d;
+  --accent-dark:#7a3e19;
+  --accent-soft:#f0d2b8;
+  --good:#2f7d5b;
+  --bad:#aa4a3e;
+  --shadow:0 18px 45px rgba(42,35,26,.09);
+  --radius:20px;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'IBM Plex Sans',sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(240,210,184,.8), transparent 34%),
+    linear-gradient(180deg, #f7f1e7 0%, #f4efe6 100%);
+  min-height:100vh;
+  overflow:hidden;
+}
+*{
+  scrollbar-width:auto;
+  scrollbar-color:var(--accent) rgba(198,176,138,.35);
+}
+*::-webkit-scrollbar{
+  width:14px;
+  height:14px;
+}
+*::-webkit-scrollbar-track{
+  background:rgba(198,176,138,.35);
+  border-radius:999px;
+}
+*::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg, var(--accent), var(--accent-dark));
+  border-radius:999px;
+  border:3px solid rgba(198,176,138,.18);
+}
+*::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(180deg, #c56f39, var(--accent-dark));
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{
+  max-width:min(1600px, 100vw);
+  margin:0 auto;
+  padding:clamp(14px, 2vw, 24px);
+  height:100vh;
+  overflow:hidden;
+}
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:22px;
+}
+.brand{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.brand h1{
+  font-family:'Fraunces',serif;
+  font-size:clamp(1.8rem,3vw,2.8rem);
+  line-height:1;
+  letter-spacing:-.03em;
+}
+.brand p{
+  color:var(--muted);
+  max-width:720px;
+}
+.top-pills{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:flex-end;
+}
+.pill{
+  border:1px solid var(--line);
+  background:rgba(255,250,242,.85);
+  border-radius:999px;
+  padding:8px 14px;
+  color:var(--muted);
+  box-shadow:var(--shadow);
+}
+.layout{
+  display:grid;
+  grid-template-columns:minmax(300px, 360px) minmax(0, 1fr);
+  gap:clamp(14px, 1.8vw, 22px);
+  align-items:start;
+  height:calc(100vh - 122px);
+  min-height:0;
+}
+.rail{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  min-height:0;
+  max-height:100%;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding-right:8px;
+  scrollbar-gutter:stable;
+}
+.panel{
+  background:linear-gradient(180deg, rgba(255,250,242,.98), rgba(249,242,231,.96));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.panel-pad{padding:18px}
+.eyebrow{
+  font-size:.78rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+.summary-card h2,
+.section-title{
+  font-family:'Fraunces',serif;
+  font-size:1.35rem;
+  line-height:1.15;
+}
+.summary-card p,
+.section-copy{
+  color:var(--muted);
+  margin-top:8px;
+}
+.mini-stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:16px;
+}
+.mini-stat{
+  background:rgba(255,255,255,.58);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+}
+.mini-stat .label{
+  font-size:.78rem;
+  color:var(--muted);
+  margin-bottom:5px;
+}
+.mini-stat .value{
+  font-family:'Fraunces',serif;
+  font-size:1.1rem;
+}
+.control-block + .control-block{margin-top:16px}
+.field-label{
+  display:block;
+  font-size:.83rem;
+  font-weight:600;
+  margin-bottom:7px;
+}
+select,input[type=text]{
+  width:100%;
+  border:1px solid var(--line);
+  background:#fffdf8;
+  color:var(--ink);
+  border-radius:14px;
+  padding:12px 14px;
+  outline:none;
+  transition:border-color .16s ease, box-shadow .16s ease;
+}
+select:focus,input[type=text]:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(176,95,45,.12);
+}
+.help-text{
+  margin-top:7px;
+  color:var(--muted);
+  font-size:.88rem;
+}
+.btn-row,.preset-row,.mode-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.btn,.preset,.mode-btn{
+  border:1px solid var(--line-strong);
+  background:#fff9f0;
+  color:var(--ink);
+  border-radius:999px;
+  padding:10px 14px;
+  transition:all .16s ease;
+}
+.btn:hover,.preset:hover,.mode-btn:hover{
+  border-color:var(--accent);
+  transform:translateY(-1px);
+}
+.btn.primary,.preset.active,.mode-btn.active{
+  background:var(--accent);
+  color:#fff8f1;
+  border-color:var(--accent);
+}
+.zip-pills{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+.search-results{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:12px;
+}
+.search-empty{
+  color:var(--muted);
+  font-size:.88rem;
+  padding:4px 2px 0;
+}
+.search-result{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:#fffdf8;
+}
+.search-result strong{
+  display:block;
+  margin-bottom:2px;
+  font-size:.95rem;
+}
+.search-result span{
+  color:var(--muted);
+  font-size:.86rem;
+}
+.search-actions{
+  display:flex;
+  gap:8px;
+  flex-shrink:0;
+}
+.search-action{
+  border:1px solid var(--line-strong);
+  background:#fff8ef;
+  color:var(--ink);
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:.84rem;
+}
+.search-action.primary{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff8f1;
+}
+.zip-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:#fffdf8;
+  font-size:.92rem;
+}
+.zip-pill button{
+  border:none;
+  background:transparent;
+  color:var(--bad);
+  font-size:1rem;
+  line-height:1;
+}
+.chart-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));
+  gap:10px;
+  margin-top:12px;
+}
+.chart-pick{
+  border:1px solid var(--line);
+  background:#fffdf8;
+  border-radius:16px;
+  padding:12px;
+  min-height:110px;
+  transition:all .16s ease;
+}
+.chart-pick.selected{
+  border-color:var(--accent);
+  box-shadow:inset 0 0 0 1px rgba(176,95,45,.16);
+  background:linear-gradient(180deg, rgba(240,210,184,.56), #fffdf8);
+}
+.chart-pick.maxed{
+  opacity:.45;
+  pointer-events:none;
+}
+.chart-pick strong{
+  display:block;
+  margin-bottom:6px;
+}
+.chart-pick span{
+  display:block;
+  color:var(--muted);
+  font-size:.88rem;
+  line-height:1.45;
+}
+.main{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  min-height:0;
+  max-height:100%;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding-right:8px;
+  scrollbar-gutter:stable;
+}
+.hero{
+  padding:clamp(16px, 2vw, 22px);
+}
+.hero-top{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  align-items:flex-start;
+}
+.hero h2{
+  font-family:'Fraunces',serif;
+  font-size:clamp(1.8rem,3vw,2.7rem);
+  line-height:1.02;
+  letter-spacing:-.03em;
+  margin-bottom:10px;
+}
+.hero p{
+  color:var(--muted);
+  max-width:760px;
+  font-size:1rem;
+}
+.hero-badge{
+  border-radius:999px;
+  padding:10px 16px;
+  border:1px solid var(--line);
+  background:#fff8ef;
+  white-space:nowrap;
+}
+.hero-kpis{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+  gap:12px;
+  margin-top:18px;
+}
+.hero-kpi{
+  background:rgba(255,255,255,.58);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:16px;
+}
+.hero-kpi .k-label{
+  font-size:.82rem;
+  color:var(--muted);
+  margin-bottom:7px;
+}
+.hero-kpi .k-value{
+  font-family:'Fraunces',serif;
+  font-size:1.35rem;
+}
+.hero-kpi .k-note{
+  margin-top:6px;
+  font-size:.9rem;
+  color:var(--muted);
+}
+.story-strip{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:12px;
+  margin-top:16px;
+}
+.story{
+  border:1px solid var(--line);
+  background:#fffdf9;
+  border-radius:18px;
+  padding:16px;
+}
+.story strong{
+  display:block;
+  margin-bottom:7px;
+}
+.story p{
+  font-size:.94rem;
+  color:var(--muted);
+}
+.canvas{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));
+  gap:18px;
+}
+.canvas.one{grid-template-columns:1fr}
+.canvas.three .card:first-child{grid-column:1/-1}
+.card{
+  overflow:hidden;
+}
+.card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  padding:16px 18px 12px;
+  border-bottom:1px solid var(--line);
+}
+.card-tools{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.card-tool{
+  border:1px solid var(--line-strong);
+  background:#fff8ef;
+  color:var(--ink);
+  border-radius:999px;
+  padding:8px 11px;
+  font-size:.82rem;
+  line-height:1;
+  white-space:nowrap;
+}
+.card-tool:hover{
+  border-color:var(--accent);
+  background:#fff1e3;
+}
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:2000;
+  display:flex;
+  flex-direction:column;
+  background:rgba(23,36,43,.56);
+  backdrop-filter:blur(6px);
+  padding:18px;
+}
+.overlay.hidden{display:none}
+.demo-banner{
+  position:fixed;
+  top:18px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:2100;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  max-width:min(720px, calc(100vw - 24px));
+  padding:12px 16px;
+  border-radius:999px;
+  border:1px solid rgba(122,62,25,.22);
+  background:rgba(255,248,239,.94);
+  box-shadow:0 20px 45px rgba(23,36,43,.18);
+  backdrop-filter:blur(10px);
+}
+.demo-banner.hidden{display:none}
+.demo-dot{
+  width:11px;
+  height:11px;
+  border-radius:999px;
+  background:var(--accent);
+  box-shadow:0 0 0 8px rgba(176,95,45,.12);
+}
+.demo-copy{
+  font-size:.95rem;
+  color:var(--ink);
+}
+.broker-cta{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:2200;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px 16px;
+  border-radius:999px;
+  border:1px solid rgba(122,62,25,.24);
+  background:rgba(255,248,239,.96);
+  color:var(--accent-dark);
+  text-decoration:none;
+  font-weight:600;
+  box-shadow:0 20px 45px rgba(23,36,43,.16);
+  backdrop-filter:blur(10px);
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.broker-cta:hover{
+  transform:translateY(-1px);
+  border-color:var(--accent);
+  box-shadow:0 24px 50px rgba(23,36,43,.2);
+}
+.overlay-shell{
+  flex:1;
+  min-height:0;
+  background:#f7f1e7;
+  border-radius:24px;
+  border:1px solid rgba(255,250,242,.65);
+  box-shadow:0 30px 80px rgba(23,36,43,.25);
+  overflow:hidden;
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+}
+.overlay-bar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+}
+.overlay-bar h2{
+  font-family:'Fraunces',serif;
+  font-size:1.45rem;
+  line-height:1.1;
+}
+.overlay-close{
+  border:1px solid var(--line-strong);
+  background:#fff8ef;
+  color:var(--ink);
+  border-radius:999px;
+  padding:10px 14px;
+}
+.overlay-card{
+  width:100%;
+  max-width:none;
+  margin:0;
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+.overlay-card .card-body{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+}
+.overlay-card .plot,
+.overlay-card .loading,
+.overlay-card [id^="export-plot-"]{
+  width:100%;
+  min-height:min(78vh, calc(100vh - 210px));
+  height:min(78vh, calc(100vh - 210px));
+}
+.card-head h3{
+  font-family:'Fraunces',serif;
+  font-size:1.2rem;
+  line-height:1.1;
+}
+.card-head p{
+  color:var(--muted);
+  font-size:.92rem;
+  margin-top:5px;
+}
+.card-body{
+  padding:12px;
+  min-height:300px;
+}
+.loading{
+  min-height:300px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+}
+.plot{
+  width:100%;
+  min-height:300px;
+}
+.overview-shell{padding:10px}
+.overview-top{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
+  gap:12px;
+  margin-bottom:14px;
+}
+.overview-box{
+  border:1px solid var(--line);
+  background:#fffdf9;
+  border-radius:16px;
+  padding:14px;
+}
+.overview-box .small{
+  font-size:.8rem;
+  color:var(--muted);
+}
+.overview-box .big{
+  font-family:'Fraunces',serif;
+  font-size:1.2rem;
+  margin-top:4px;
+}
+.overview-box .tiny{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:.9rem;
+}
+.detail-meta{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
+  gap:10px;
+  margin-bottom:12px;
+}
+.detail-box{
+  border:1px solid var(--line);
+  background:#fffdf9;
+  border-radius:14px;
+  padding:12px;
+}
+.detail-box .small{
+  font-size:.78rem;
+  color:var(--muted);
+  margin-bottom:5px;
+}
+.detail-box .big{
+  font-size:1rem;
+  font-weight:600;
+}
+.browser-shell{padding:8px}
+.browser-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:10px;
+}
+.browser-count{
+  color:var(--muted);
+  font-size:.9rem;
+}
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:16px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:760px;
+}
+thead{background:#f8eee0}
+th,td{
+  padding:12px 14px;
+  text-align:left;
+}
+th{
+  font-size:.8rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+  cursor:pointer;
+}
+tbody tr{
+  border-top:1px solid #eadfce;
+}
+tbody tr:hover{
+  background:#fff6ea;
+}
+.num{text-align:right}
+.pos{color:var(--good)}
+.neg{color:var(--bad)}
+.empty{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:260px;
+  color:var(--muted);
+  text-align:center;
+  padding:24px;
+}
+@media (max-width:1320px){
+  .layout{grid-template-columns:minmax(280px, 320px) minmax(0, 1fr)}
+  .canvas{grid-template-columns:repeat(auto-fit, minmax(300px, 1fr))}
+}
+@media (max-height:860px){
+  .app{padding:14px}
+  .topbar{margin-bottom:14px}
+  .layout{height:calc(100vh - 104px)}
+  .panel-pad{padding:14px}
+  .hero{padding:16px}
+  .card-body,.loading,.plot{min-height:260px}
+}
+@media (max-width:1180px){
+  body{overflow:auto}
+  .app{height:auto;overflow:visible}
+  .layout{grid-template-columns:1fr;height:auto}
+  .rail,.main{max-height:none;overflow:visible;padding-right:0}
+  .topbar{align-items:flex-start}
+}
+@media (max-width:820px){
+  .app{padding:12px}
+  .topbar,.hero-top,.browser-top{flex-direction:column;align-items:flex-start}
+  .search-result{flex-direction:column;align-items:flex-start}
+  .search-actions{width:100%;flex-wrap:wrap}
+  .search-action{flex:1}
+  .chart-grid,.hero-kpis,.story-strip,.overview-top,.detail-meta,.mini-stats,.canvas{grid-template-columns:1fr}
+  table{min-width:640px}
+  .broker-cta{
+    right:12px;
+    bottom:12px;
+    left:12px;
+    border-radius:18px;
+  }
+}
+@media (max-width:560px){
+  .brand h1{font-size:1.7rem}
+  .pill{width:100%;justify-content:flex-start}
+  .btn,.preset,.mode-btn{width:100%;justify-content:center}
+  .hero-badge{white-space:normal}
+  .canvas{grid-template-columns:1fr}
+  .card-head{padding:14px}
+  .card-tools{width:100%;justify-content:flex-start}
+  .card-body{padding:10px}
+  .overlay{padding:10px}
+  .overlay-shell{padding:12px;border-radius:18px}
+  .overlay-card .plot,
+  .overlay-card .loading,
+  .overlay-card [id^="export-plot-"]{
+    min-height:calc(100vh - 190px);
+    height:calc(100vh - 190px);
+  }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <h1>50-State ZHVI Dashboard</h1>
+      <p>Open-source ZIP-level housing intelligence built on Zillow Research data. Switch states, compare local markets, and browse price patterns without touching the raw CSV.</p>
+    </div>
+    <div class="top-pills">
+      <div class="pill" id="stateTopPill">Statewide view</div>
+      <div class="pill">Open source</div>
+      <div class="pill">{{ stats.date_range }}</div>
+      <div class="pill">{{ stats.total_zips }} ZIP histories loaded in memory</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="rail">
+      <section class="panel panel-pad summary-card">
+        <div class="eyebrow">Daily Read</div>
+        <h2 id="railSummaryTitle">What happened in this state?</h2>
+        <p id="railSummaryCopy">Loading the statewide snapshot.</p>
+        <div class="mini-stats" id="railMiniStats"></div>
+      </section>
+
+      <section class="panel panel-pad">
+        <div class="eyebrow">Pick A State</div>
+        <div class="control-block">
+          <label class="field-label" for="stateSelect">State</label>
+          <select id="stateSelect"></select>
+          <div class="help-text" id="stateHelpText">Choose a state to load its ZIP-level housing view.</div>
+        </div>
+      </section>
+
+      <section class="panel panel-pad">
+        <div class="eyebrow">Pick Places</div>
+        <div class="control-block">
+          <label class="field-label" for="zipCitySearch">Find a ZIP or city</label>
+          <input type="text" id="zipCitySearch" placeholder="Search Summit, New Providence, 07901..." oninput="renderZipSearchResults()">
+          <div class="help-text" id="zipSearchHelpText">Search ZIPs by ZIP code, city, county, or metro area.</div>
+          <div class="search-results" id="zipSearchResults"></div>
+        </div>
+        <div class="control-block">
+          <label class="field-label" for="primaryZipSelect">Main ZIP</label>
+          <select id="primaryZipSelect"></select>
+          <div class="help-text">This drives the detail view and is the first ZIP in comparisons.</div>
+        </div>
+        <div class="control-block">
+          <label class="field-label" for="compareZipSelect">Add another ZIP to compare</label>
+          <select id="compareZipSelect"></select>
+        </div>
+        <div class="control-block btn-row">
+          <button class="btn primary" onclick="addCompareZip()">Add to comparison</button>
+          <button class="btn" onclick="focusDetailZip()">Open detail view</button>
+        </div>
+        <div class="zip-pills" id="zipPills"></div>
+      </section>
+
+      <section class="panel panel-pad">
+        <div class="eyebrow">Quick Views</div>
+        <div class="preset-row">
+          <button class="preset" id="preset-daily" onclick="applyPreset('daily')">Daily snapshot</button>
+          <button class="preset" id="preset-compare" onclick="applyPreset('compare')">Compare ZIPs</button>
+          <button class="preset" id="preset-deep" onclick="applyPreset('deep')">Deep dive</button>
+        </div>
+        <p class="section-copy">Start with a preset, then fine-tune the chart mix below.</p>
+      </section>
+
+      <section class="panel panel-pad" id="moversPanel">
+        <div class="eyebrow">Mover View</div>
+        <div class="mode-row">
+          <button class="mode-btn active" onclick="setMoversMode('gain', this)">Best long-term</button>
+          <button class="mode-btn" onclick="setMoversMode('loss', this)">Weakest long-term</button>
+          <button class="mode-btn" onclick="setMoversMode('yoy', this)">Best this year</button>
+        </div>
+      </section>
+
+      <section class="panel panel-pad" id="browserPanel">
+        <div class="eyebrow">Search ZIPs</div>
+        <label class="field-label" for="tableSearch">Search by ZIP, city, county, or metro</label>
+        <input type="text" id="tableSearch" placeholder="Try Summit, 07030, Essex..." oninput="filterTable()">
+      </section>
+
+      <section class="panel panel-pad">
+        <div class="eyebrow">Choose Charts</div>
+        <p class="section-copy">You can show up to four cards at once.</p>
+        <div class="chart-grid" id="pickerGrid"></div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <section class="panel hero" id="hero"></section>
+      <section class="canvas" id="canvas"></section>
+    </main>
+  </div>
+</div>
+<div class="overlay hidden" id="fullscreenOverlay" onclick="handleOverlayBackdrop(event)">
+  <div class="overlay-shell">
+    <div class="overlay-bar">
+      <h2 id="overlayTitle">Chart</h2>
+      <button class="overlay-close" onclick="closeCardOverlay()">Close</button>
+    </div>
+    <section class="panel card overlay-card" id="overlayCard"></section>
+  </div>
+</div>
+<div class="demo-banner hidden" id="demoBanner" aria-live="polite">
+  <span class="demo-dot"></span>
+  <span class="demo-copy" id="demoBannerCopy">Demo mode</span>
+</div>
+<a class="broker-cta" href="https://micheledibenedetto.net" target="_blank" rel="noopener noreferrer">Contact a real estate broker</a>
+
+<script>
+const QUERY = new URLSearchParams(window.location.search);
+const DEMO_MODE = QUERY.get('demo') === '1';
+const STATE_CATALOG = {{ state_catalog_json|safe }};
+const STATE_META = Object.fromEntries(STATE_CATALOG.map(item => [item.code, item]));
+let currentState = '{{ stats.default_state }}';
+const CHARTS = [
+  { id:'overview', title:'Today\'s statewide snapshot', desc:'Simple takeaways plus the metro trend line.', endpoint:null, special:'overview' },
+  { id:'history', title:'Compare ZIP values', desc:'Follow one or more ZIPs over time.', endpoint:'/chart/price-history' },
+  { id:'movers', title:'Fastest movers', desc:'See which ZIPs rose the most or cooled the most.', endpoint:'/chart/top-movers' },
+  { id:'detail', title:'One ZIP in detail', desc:'A four-panel breakdown for the main ZIP.', endpoint:'/chart/zip-detail', special:'detail' },
+  { id:'browser', title:'Browse all ZIPs', desc:'Search and sort statewide ZIPs in plain table form.', endpoint:null, special:'browser' },
+  { id:'metro', title:'Metro trend lines', desc:'Average value trends for the biggest metros in the selected state.', endpoint:'/chart/metro-comparison' },
+  { id:'heatmap', title:'Year-by-year scoreboard', desc:'A year-end view of how ZIPs stacked up.', endpoint:'/chart/yoy-heatmap' },
+  { id:'distribution', title:'County price ranges', desc:'How home values spread out by county.', endpoint:'/chart/price-distribution' },
+  { id:'scatter', title:'Market size vs. price', desc:'A broader market view for advanced comparison.', endpoint:'/chart/scatter-rank' },
+  { id:'matrix', title:'Value and growth map', desc:'Current value versus long-term growth.', endpoint:'/chart/investment-matrix' },
+];
+
+let selected = ['overview', 'movers', 'detail', 'browser'];
+let activeZips = [];
+let detailZip = '07901';
+let moversMode = 'gain';
+let allZipRows = [];
+let summary = null;
+let tableData = [];
+let tSortCol = 'latest';
+let tSortAsc = false;
+let filteredZipRows = [];
+
+const plotConfig = {
+  responsive:true,
+  displaylogo:false,
+  modeBarButtonsToRemove:['select2d','lasso2d','toggleSpikelines'],
+  toImageButtonOptions:{format:'png',scale:2}
+};
+
+function getStateMeta(code = currentState){
+  return STATE_META[code] || { code, name: code, blurb: 'A quick read on local housing movement.' };
+}
+
+function getStateName(code = currentState){
+  return getStateMeta(code).name;
+}
+
+function getCardText(id){
+  const stateName = getStateName();
+  return {
+    overview: { title:'Today\'s statewide snapshot', sub:`The fastest way to understand ${stateName} at a glance.` },
+    history: { title:'Compare ZIP values', sub:'Track the places you picked side by side.' },
+    movers: { title:'Fastest movers', sub:`Best and worst performers across ${stateName}.` },
+    detail: { title:'One ZIP in detail', sub:'A closer look at the selected ZIP.' },
+    browser: { title:`Browse all ${stateName} ZIPs`, sub:`Search, sort, and click a row to jump into detail in ${stateName}.` },
+    metro: { title:'Metro trend lines', sub:`A broad view of major metro averages across ${stateName}.` },
+    heatmap: { title:'Year-by-year scoreboard', sub:`Where yearly gains and losses have landed in ${stateName}.` },
+    distribution: { title:'County price ranges', sub:`How wide the price spread is across ${stateName} counties.` },
+    scatter: { title:'Market size vs. price', sub:`A broader statewide spread view for ${stateName}.` },
+    matrix: { title:'Value and growth map', sub:`See pricey versus fast-growing ZIPs across ${stateName}.` },
+  }[id];
+}
+
+(async function init(){
+  populateStateSelect();
+  await Promise.all([loadSummary(), loadZipRows()]);
+  buildPicker();
+  renderZipPills();
+  applyPreset('daily');
+  if (DEMO_MODE) {
+    startDemoPresentation().catch(error => {
+      console.error('Demo mode failed', error);
+      showDemoBanner('Demo mode hit an error. Check the browser console.');
+    });
+  }
+})();
+
+function populateStateSelect(){
+  const select = document.getElementById('stateSelect');
+  if (!select) return;
+  select.innerHTML = STATE_CATALOG.map(item => `<option value="${item.code}">${item.name}</option>`).join('');
+  select.value = currentState;
+  select.addEventListener('change', async () => {
+    await setState(select.value);
+  });
+  refreshStateChrome();
+}
+
+function refreshStateChrome(){
+  const meta = getStateMeta();
+  document.getElementById('stateTopPill').textContent = `${meta.name} statewide`;
+  document.getElementById('railSummaryTitle').textContent = `What happened in ${meta.name}?`;
+  document.getElementById('stateHelpText').textContent = meta.blurb;
+  document.getElementById('zipSearchHelpText').textContent = `Search all ${meta.name} ZIPs by ZIP code, city, county, or metro area.`;
+}
+
+async function setState(nextState){
+  if (!nextState || nextState === currentState) return;
+  currentState = nextState;
+  summary = null;
+  allZipRows = [];
+  tableData = [];
+  filteredZipRows = [];
+  activeZips = [];
+  detailZip = '';
+  document.getElementById('zipCitySearch').value = '';
+  document.getElementById('tableSearch').value = '';
+  refreshStateChrome();
+  await Promise.all([loadSummary(), loadZipRows()]);
+  renderZipPills();
+  buildPicker();
+  renderCanvas();
+}
+
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function showDemoBanner(message){
+  const banner = document.getElementById('demoBanner');
+  const copy = document.getElementById('demoBannerCopy');
+  if (!banner || !copy) return;
+  copy.textContent = message;
+  banner.classList.remove('hidden');
+}
+
+function hideDemoBanner(){
+  document.getElementById('demoBanner')?.classList.add('hidden');
+}
+
+function chooseDemoZips(){
+  const picks = [];
+  const seen = new Set();
+  const source = [
+    summary?.highest_value_zip?.zip,
+    summary?.strongest_yoy?.zip,
+    summary?.top_gainer?.zip,
+    summary?.lowest_value_zip?.zip,
+    ...allZipRows.slice(0, 12).map(row => row.zip),
+  ];
+
+  for (const zip of source) {
+    if (!zip || seen.has(zip)) continue;
+    seen.add(zip);
+    picks.push(zip);
+    if (picks.length === 3) break;
+  }
+  return picks;
+}
+
+function focusCard(id){
+  document.getElementById(`card-${id}`)?.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+async function startDemoPresentation(){
+  if (startDemoPresentation.started) return;
+  startDemoPresentation.started = true;
+
+  const demoZips = chooseDemoZips();
+  if (!demoZips.length) return;
+
+  showDemoBanner('Opening the statewide daily snapshot');
+  applyPreset('daily');
+  await sleep(2400);
+
+  showDemoBanner('Switching the main ZIP to the highest-value market');
+  setMainZip(demoZips[0]);
+  await sleep(2200);
+
+  if (demoZips[1]) {
+    showDemoBanner('Adding a second ZIP for side-by-side comparison');
+    addSearchZip(demoZips[1]);
+    await sleep(1800);
+  }
+
+  if (demoZips[2]) {
+    showDemoBanner('Adding a third ZIP to broaden the comparison');
+    addSearchZip(demoZips[2]);
+    await sleep(1800);
+  }
+
+  showDemoBanner('Switching into the comparison layout');
+  applyPreset('compare');
+  focusCard('history');
+  await sleep(2400);
+
+  const yoyButton = document.querySelectorAll('.mode-btn')[2];
+  if (yoyButton) {
+    showDemoBanner('Highlighting the strongest year-over-year movers');
+    setMoversMode('yoy', yoyButton);
+    await sleep(2200);
+  }
+
+  const focusRow = allZipRows.find(row => row.zip === demoZips[1]) || allZipRows[0];
+  if (focusRow) {
+    showDemoBanner(`Searching the ZIP browser for ${focusRow.city}`);
+    document.getElementById('tableSearch').value = focusRow.city;
+    filterTable();
+    focusCard('browser');
+    await sleep(2200);
+  }
+
+  showDemoBanner('Opening the comparison chart fullscreen');
+  openCardOverlay('history');
+  await sleep(3200);
+  closeCardOverlay();
+  await sleep(1200);
+
+  showDemoBanner('Finishing with a ZIP-level deep dive');
+  applyPreset('deep');
+  focusCard('detail');
+  await sleep(2600);
+
+  showDemoBanner('Demo complete');
+  await sleep(1600);
+  hideDemoBanner();
+}
+
+async function loadSummary(){
+  summary = await (await fetch(`/api/summary?state=${currentState}`)).json();
+  renderHero();
+  renderRailSummary();
+}
+
+async function loadZipRows(){
+  allZipRows = await (await fetch(`/api/zips?state=${currentState}&limit=2000`)).json();
+  tableData = [...allZipRows];
+  filteredZipRows = [...allZipRows];
+  detailZip = summary?.highest_value_zip?.zip || allZipRows[0]?.zip || '';
+  activeZips = detailZip ? [detailZip] : [];
+  populateZipDropdowns(filteredZipRows);
+  bindZipDropdowns();
+  renderZipSearchResults();
+}
+
+function populateZipDropdowns(rows){
+  const sourceRows = rows?.length ? rows : allZipRows;
+  const options = sourceRows.map(row => {
+    const label = `${row.zip} — ${row.city}`;
+    return `<option value="${row.zip}">${label}</option>`;
+  }).join('');
+
+  const primary = document.getElementById('primaryZipSelect');
+  const compare = document.getElementById('compareZipSelect');
+  primary.innerHTML = options;
+  compare.innerHTML = `<option value="">Choose another ZIP</option>${options}`;
+
+  const initialZip = allZipRows.some(row => row.zip === detailZip) ? detailZip : (allZipRows[0]?.zip || '');
+  if (!detailZip) {
+    detailZip = initialZip;
+  }
+  if (!activeZips.length && detailZip) {
+    activeZips = [detailZip];
+  }
+
+  const primaryValue = sourceRows.some(row => row.zip === detailZip) ? detailZip : (sourceRows[0]?.zip || '');
+  primary.value = primaryValue;
+  compare.value = '';
+}
+
+function bindZipDropdowns(){
+  const primary = document.getElementById('primaryZipSelect');
+  if (primary.dataset.bound === 'true') return;
+  primary.dataset.bound = 'true';
+  primary.addEventListener('change', () => {
+    detailZip = primary.value;
+    if (!activeZips.length) {
+      activeZips = [detailZip];
+    } else {
+      activeZips[0] = detailZip;
+    }
+    renderZipPills();
+    reloadSlot('detail');
+    reloadSlot('history');
+  });
+}
+
+function renderHero(){
+  const hero = document.getElementById('hero');
+  const meta = getStateMeta();
+  if (!summary) {
+    hero.innerHTML = `<div class="loading">Loading ${meta.name} overview...</div>`;
+    return;
+  }
+
+  hero.innerHTML = `
+    <div class="hero-top">
+      <div>
+        <div class="eyebrow">Statewide snapshot</div>
+        <h2>${meta.name} housing intelligence without spreadsheet friction.</h2>
+        <p>${meta.blurb} Typical home value, strongest yearly move, hottest long-run ZIP, and the counties with the highest median values are preloaded in memory so the dashboard feels immediate once the server starts.</p>
+      </div>
+      <div class="hero-badge">Latest data: ${summary.latest_date}</div>
+    </div>
+    <div class="hero-kpis">
+      <div class="hero-kpi">
+        <div class="k-label">Typical ${meta.name} home value</div>
+        <div class="k-value">${fmt(summary.median_value)}</div>
+        <div class="k-note">${summary.zip_count} ZIP histories in ${meta.name}</div>
+      </div>
+      <div class="hero-kpi">
+        <div class="k-label">Average yearly move</div>
+        <div class="k-value">${signed(summary.average_yoy)}%</div>
+        <div class="k-note">${summary.average_yoy >= 0 ? 'Market still climbing on average.' : 'Average yearly trend is cooling.'}</div>
+      </div>
+      <div class="hero-kpi">
+        <div class="k-label">Highest-value ZIP</div>
+        <div class="k-value">${summary.highest_value_zip.zip}</div>
+        <div class="k-note">${summary.highest_value_zip.city} · ${fmt(summary.highest_value_zip.latest)}</div>
+      </div>
+      <div class="hero-kpi">
+        <div class="k-label">Strongest yearly ZIP</div>
+        <div class="k-value">${summary.strongest_yoy.zip}</div>
+        <div class="k-note">${summary.strongest_yoy.city} · ${signed(summary.strongest_yoy.yoy_pct)}%</div>
+      </div>
+    </div>
+    <div class="story-strip">
+      <div class="story">
+        <strong>Fastest long-run gainer</strong>
+        <p>${summary.top_gainer.zip} in ${summary.top_gainer.city} leads long-term appreciation at ${signed(summary.top_gainer.change_pct)}%.</p>
+      </div>
+      <div class="story">
+        <strong>Softest yearly trend</strong>
+        <p>${summary.softest_yoy.zip} in ${summary.softest_yoy.city} is the weakest yearly reading at ${signed(summary.softest_yoy.yoy_pct)}%.</p>
+      </div>
+      <div class="story">
+        <strong>Priciest counties right now</strong>
+        <p>${summary.county_highlights.map(item => `${item.county.replace(' County', '')} (${fmt(item.median_value)})`).join(' · ')}</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderRailSummary(){
+  if (!summary) return;
+  const meta = getStateMeta();
+  document.getElementById('railSummaryCopy').textContent =
+    `${meta.name} is currently centered around ${fmt(summary.median_value)} as a typical home value. ${summary.strongest_yoy.city} has the strongest yearly move, while ${summary.highest_value_zip.city} carries the highest current median among ZIPs shown here.`;
+  document.getElementById('railMiniStats').innerHTML = `
+    <div class="mini-stat">
+      <div class="label">Average YoY</div>
+      <div class="value">${signed(summary.average_yoy)}%</div>
+    </div>
+    <div class="mini-stat">
+      <div class="label">Highest ZIP</div>
+      <div class="value">${summary.highest_value_zip.zip}</div>
+    </div>
+    <div class="mini-stat">
+      <div class="label">Strongest YoY</div>
+      <div class="value">${summary.strongest_yoy.zip}</div>
+    </div>
+    <div class="mini-stat">
+      <div class="label">Lowest-value ZIP</div>
+      <div class="value">${summary.lowest_value_zip.zip}</div>
+    </div>
+  `;
+}
+
+function buildPicker(){
+  const grid = document.getElementById('pickerGrid');
+  grid.innerHTML = CHARTS.map(chart => `
+    <button class="chart-pick" id="pick-${chart.id}" onclick="toggleChart('${chart.id}')">
+      <strong>${chart.title}</strong>
+      <span>${chart.desc}</span>
+    </button>
+  `).join('');
+  syncPicker();
+}
+
+function toggleChart(id){
+  const index = selected.indexOf(id);
+  if (index >= 0) {
+    selected.splice(index, 1);
+  } else {
+    if (selected.length >= 4) return;
+    selected.push(id);
+  }
+  syncPicker();
+  renderCanvas();
+}
+
+function syncPicker(){
+  CHARTS.forEach(chart => {
+    const el = document.getElementById(`pick-${chart.id}`);
+    const isSelected = selected.includes(chart.id);
+    el.classList.toggle('selected', isSelected);
+    el.classList.toggle('maxed', !isSelected && selected.length >= 4);
+  });
+  document.getElementById('moversPanel').style.display = selected.includes('movers') ? '' : 'none';
+  document.getElementById('browserPanel').style.display = selected.includes('browser') ? '' : 'none';
+}
+
+function applyPreset(name){
+  document.querySelectorAll('.preset').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`preset-${name}`).classList.add('active');
+  if (name === 'compare') {
+    selected = ['history', 'detail', 'browser', 'metro'];
+  } else if (name === 'deep') {
+    selected = ['detail', 'history', 'movers', 'distribution'];
+  } else {
+    selected = ['overview', 'movers', 'detail', 'browser'];
+  }
+  syncPicker();
+  renderCanvas();
+}
+
+function addCompareZip(){
+  const compare = document.getElementById('compareZipSelect').value;
+  if (!compare) return;
+  if (!activeZips.includes(compare)) {
+    activeZips.push(compare);
+  }
+  document.getElementById('compareZipSelect').value = '';
+  renderZipPills();
+  reloadSlot('history');
+}
+
+function focusDetailZip(){
+  if (!selected.includes('detail')) {
+    selected = selected.slice(0, 3).concat('detail');
+    syncPicker();
+    renderCanvas();
+  } else {
+    reloadSlot('detail');
+  }
+}
+
+function renderZipPills(){
+  const host = document.getElementById('zipPills');
+  const labels = activeZips.map(zip => {
+    const row = allZipRows.find(item => item.zip === zip);
+    const label = row ? `${row.zip} — ${row.city}` : zip;
+    return `<div class="zip-pill">${label}${activeZips.length > 1 ? `<button onclick="removeZip('${zip}')">×</button>` : ''}</div>`;
+  });
+  host.innerHTML = labels.join('');
+}
+
+function renderZipSearchResults(){
+  const host = document.getElementById('zipSearchResults');
+  if (!host) return;
+
+  const q = (document.getElementById('zipCitySearch')?.value || '').trim().toLowerCase();
+  if (!q) {
+    filteredZipRows = [...allZipRows];
+    populateZipDropdowns(filteredZipRows);
+    host.innerHTML = `<div class="search-empty">Start typing to search ${getStateName()} ZIPs and towns.</div>`;
+    return;
+  }
+
+  const matches = allZipRows.filter(row =>
+    [row.zip, row.city, row.county, row.metro].some(value => (value || '').toLowerCase().includes(q))
+  ).slice(0, 8);
+  filteredZipRows = allZipRows.filter(row =>
+    [row.zip, row.city, row.county, row.metro].some(value => (value || '').toLowerCase().includes(q))
+  );
+  populateZipDropdowns(filteredZipRows);
+
+  if (!matches.length) {
+    host.innerHTML = '<div class="search-empty">No matching ZIPs found.</div>';
+    return;
+  }
+
+  host.innerHTML = matches.map(row => `
+    <div class="search-result">
+      <div>
+        <strong>${row.zip} — ${row.city}</strong>
+        <span>${row.county || 'Unknown county'}${row.metro ? ` · ${row.metro}` : ''}</span>
+      </div>
+      <div class="search-actions">
+        <button class="search-action primary" onclick="setMainZip('${row.zip}')">Set main</button>
+        <button class="search-action" onclick="addSearchZip('${row.zip}')">Compare</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setMainZip(zip){
+  detailZip = zip;
+  document.getElementById('primaryZipSelect').value = zip;
+  if (!activeZips.length) {
+    activeZips = [zip];
+  } else {
+    activeZips[0] = zip;
+  }
+  renderZipPills();
+  reloadSlot('detail');
+  reloadSlot('history');
+}
+
+function addSearchZip(zip){
+  if (!activeZips.includes(zip)) {
+    activeZips.push(zip);
+  }
+  renderZipPills();
+  reloadSlot('history');
+}
+
+function removeZip(zip){
+  activeZips = activeZips.filter(item => item !== zip);
+  if (!activeZips.length && detailZip) {
+    activeZips = [detailZip];
+  }
+  renderZipPills();
+  reloadSlot('history');
+}
+
+function renderCanvas(){
+  const canvas = document.getElementById('canvas');
+  canvas.className = 'canvas';
+  if (selected.length === 1) canvas.classList.add('one');
+  if (selected.length === 3) canvas.classList.add('three');
+
+  canvas.innerHTML = selected.map(id => {
+    const text = getCardText(id);
+    return `
+      <section class="panel card" id="card-${id}">
+        <div class="card-head">
+          <div>
+            <h3>${text.title}</h3>
+            <p>${text.sub}</p>
+          </div>
+          <div class="card-tools">
+            <button class="card-tool" onclick="openCardOverlay('${id}')">Open Fullscreen</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="slot-${id}" class="loading">Loading...</div>
+        </div>
+      </section>
+    `;
+  }).join('');
+
+  selected.forEach(loadSlot);
+}
+
+function reloadSlot(id){
+  if (selected.includes(id)) loadSlot(id);
+}
+
+function openCardOverlay(id){
+  const card = document.getElementById(`card-${id}`);
+  if (!card) return;
+
+  const exportPayload = buildCardExportPayload(card, id);
+  const overlay = document.getElementById('fullscreenOverlay');
+  const overlayCard = document.getElementById('overlayCard');
+  document.getElementById('overlayTitle').textContent = getCardText(id)?.title || 'Chart';
+  overlayCard.innerHTML = exportPayload.html;
+  exportPayload.plots.forEach(plot => {
+    const el = document.getElementById(plot.id);
+    if (el) {
+      Plotly.newPlot(
+        el,
+        plot.data,
+        { ...plot.layout, autosize: true },
+        { ...plot.config, responsive: true }
+      ).then(() => {
+        requestAnimationFrame(() => Plotly.Plots.resize(el));
+      });
+    }
+  });
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => {
+    overlayCard.querySelectorAll('.js-plotly-plot').forEach(el => Plotly.Plots.resize(el));
+  });
+}
+
+function closeCardOverlay(){
+  const overlay = document.getElementById('fullscreenOverlay');
+  const overlayCard = document.getElementById('overlayCard');
+  overlay.classList.add('hidden');
+  overlayCard.innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+function handleOverlayBackdrop(event){
+  if (event.target.id === 'fullscreenOverlay') {
+    closeCardOverlay();
+  }
+}
+
+function buildCardExportPayload(card, id){
+  const clone = card.cloneNode(true);
+  clone.querySelectorAll('.card-tools').forEach(node => node.remove());
+
+  const plots = [];
+  clone.querySelectorAll('.js-plotly-plot').forEach((plotEl, index) => {
+    const exportId = `export-plot-${id}-${index}`;
+    const livePlot = card.querySelectorAll('.js-plotly-plot')[index];
+    plots.push({
+      id: exportId,
+      data: livePlot?.data || [],
+      layout: livePlot?.layout || {},
+      config: plotConfig,
+    });
+    plotEl.outerHTML = `<div id="${exportId}" class="plot"></div>`;
+  });
+
+  return {
+    html: clone.innerHTML,
+    plots,
+  };
+}
+
+async function loadSlot(id){
+  const chart = CHARTS.find(item => item.id === id);
+  if (!chart) return;
+  if (chart.special === 'overview') return loadOverview();
+  if (chart.special === 'detail') return loadDetail();
+  if (chart.special === 'browser') return loadBrowser();
+
+  const slot = document.getElementById(`slot-${id}`);
+  if (!slot) return;
+  slot.className = 'loading';
+  slot.textContent = 'Loading...';
+
+  const params = new URLSearchParams({ state: currentState });
+  if (id === 'history') params.set('zips', activeZips.join(','));
+  if (id === 'movers') params.set('mode', moversMode);
+
+  try {
+    const response = await fetch(`${chart.endpoint}?${params.toString()}`);
+    const data = await response.json();
+    slot.className = 'plot';
+    slot.textContent = '';
+    Plotly.react(slot, JSON.parse(data.chart), {}, plotConfig);
+  } catch (error) {
+    slot.className = 'empty';
+    slot.textContent = 'This card could not be loaded.';
+  }
+}
+
+async function loadOverview(){
+  const slot = document.getElementById('slot-overview');
+  if (!slot) return;
+  slot.className = '';
+  slot.innerHTML = `
+    <div class="overview-shell">
+      <div class="overview-top">
+        <div class="overview-box">
+          <div class="small">Typical ${getStateName()} value</div>
+          <div class="big">${fmt(summary.median_value)}</div>
+          <div class="tiny">Across ${summary.zip_count} ZIP histories.</div>
+        </div>
+        <div class="overview-box">
+          <div class="small">Average yearly move</div>
+          <div class="big">${signed(summary.average_yoy)}%</div>
+          <div class="tiny">${summary.average_yoy >= 0 ? 'Still positive overall.' : 'Yearly trend is negative overall.'}</div>
+        </div>
+        <div class="overview-box">
+          <div class="small">Most expensive ZIP</div>
+          <div class="big">${summary.highest_value_zip.zip}</div>
+          <div class="tiny">${summary.highest_value_zip.city}</div>
+        </div>
+        <div class="overview-box">
+          <div class="small">Fastest yearly ZIP</div>
+          <div class="big">${summary.strongest_yoy.zip}</div>
+          <div class="tiny">${summary.strongest_yoy.city} · ${signed(summary.strongest_yoy.yoy_pct)}%</div>
+        </div>
+      </div>
+      <div id="overviewMetro" class="loading">Loading metro trend...</div>
+    </div>
+  `;
+
+  const metroHost = document.getElementById('overviewMetro');
+  const metroData = await (await fetch(`/chart/metro-comparison?state=${currentState}`)).json();
+  metroHost.className = 'plot';
+  metroHost.textContent = '';
+  Plotly.react(metroHost, JSON.parse(metroData.chart), {}, plotConfig);
+}
+
+async function loadDetail(){
+  const slot = document.getElementById('slot-detail');
+  if (!slot) return;
+  slot.className = 'loading';
+  slot.textContent = 'Loading...';
+
+  try {
+    const response = await fetch(`/chart/zip-detail?zip=${detailZip}`);
+    if (!response.ok) throw new Error('missing');
+    const data = await response.json();
+    const meta = data.meta;
+    slot.className = '';
+    slot.innerHTML = `
+      <div class="detail-meta">
+        ${[
+          ['ZIP', meta.zip],
+          ['Town / city', meta.city],
+          ['Current value', fmt(meta.latest)],
+          ['Yearly move', `${signed(meta.yoy_pct)}%`],
+          ['County', meta.county],
+          ['Long-run move', `${signed(meta.change_pct)}%`],
+          ['Peak value', fmt(meta.peak)],
+          ['Metro', meta.metro || 'Unknown']
+        ].map(([label, value]) => `
+          <div class="detail-box">
+            <div class="small">${label}</div>
+            <div class="big">${value || '—'}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div id="detailPlot" class="plot"></div>
+    `;
+    Plotly.react(document.getElementById('detailPlot'), JSON.parse(data.chart), {}, plotConfig);
+  } catch (error) {
+    slot.className = 'empty';
+    slot.textContent = 'ZIP detail could not be loaded.';
+  }
+}
+
+async function loadBrowser(){
+  const slot = document.getElementById('slot-browser');
+  if (!slot) return;
+  slot.className = '';
+  slot.innerHTML = `
+    <div class="browser-shell">
+      <div class="browser-top">
+        <div class="browser-count" id="browserCount"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="setSort('zip')">ZIP</th>
+              <th onclick="setSort('city')">Town / city</th>
+              <th onclick="setSort('county')">County</th>
+              <th onclick="setSort('latest')">Current value</th>
+              <th onclick="setSort('yoy_pct')">Yearly move</th>
+              <th onclick="setSort('change_pct')">Long-run move</th>
+              <th onclick="setSort('peak')">Peak</th>
+            </tr>
+          </thead>
+          <tbody id="browserRows"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  filterTable();
+}
+
+function filterTable(){
+  const tableBody = document.getElementById('browserRows');
+  const counter = document.getElementById('browserCount');
+  if (!tableBody || !counter) return;
+
+  const q = (document.getElementById('tableSearch').value || '').toLowerCase().trim();
+  let rows = tableData.filter(row => {
+    if (!q) return true;
+    return [row.zip, row.city, row.county, row.metro].some(value => (value || '').toLowerCase().includes(q));
+  });
+
+  rows.sort((a, b) => {
+    const av = a[tSortCol] ?? '';
+    const bv = b[tSortCol] ?? '';
+    if (typeof av === 'number' && typeof bv === 'number') {
+      return tSortAsc ? av - bv : bv - av;
+    }
+    return tSortAsc ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+  });
+
+  counter.textContent = `${rows.length} matching ZIPs in ${getStateName()}. Click a row to make it your main detail ZIP.`;
+  tableBody.innerHTML = rows.slice(0, 400).map(row => `
+    <tr onclick="jumpToZip('${row.zip}')">
+      <td>${row.zip}</td>
+      <td>${row.city}</td>
+      <td>${row.county || ''}</td>
+      <td class="num">${fmt(row.latest)}</td>
+      <td class="num ${row.yoy_pct >= 0 ? 'pos' : 'neg'}">${signed(row.yoy_pct)}%</td>
+      <td class="num ${row.change_pct >= 0 ? 'pos' : 'neg'}">${signed(row.change_pct)}%</td>
+      <td class="num">${fmt(row.peak)}</td>
+    </tr>
+  `).join('');
+}
+
+function setSort(column){
+  if (tSortCol === column) {
+    tSortAsc = !tSortAsc;
+  } else {
+    tSortCol = column;
+    tSortAsc = false;
+  }
+  filterTable();
+}
+
+function jumpToZip(zip){
+  detailZip = zip;
+  document.getElementById('primaryZipSelect').value = zip;
+  if (!activeZips.length) {
+    activeZips = [zip];
+  } else {
+    activeZips[0] = zip;
+  }
+  renderZipPills();
+  if (!selected.includes('detail')) {
+    selected = selected.slice(0, 3).concat('detail');
+    syncPicker();
+    renderCanvas();
+  } else {
+    reloadSlot('detail');
+    reloadSlot('history');
+  }
+}
+
+function setMoversMode(mode, button){
+  moversMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+  button.classList.add('active');
+  reloadSlot('movers');
+}
+
+function fmt(value){
+  if (value === null || value === undefined) return '—';
+  return new Intl.NumberFormat('en-US', {
+    style:'currency',
+    currency:'USD',
+    maximumFractionDigits:0
+  }).format(value);
+}
+
+function signed(value){
+  if (value === null || value === undefined) return '—';
+  return `${value > 0 ? '+' : ''}${Number(value).toFixed(1)}`;
+}
+</script>
+</body>
+</html>
